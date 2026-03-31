@@ -3,9 +3,10 @@ import os
 import time
 
 from confluent_kafka import Consumer
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
-from models import Session, TrainingMetric, TrainingResult
+from models import Base, Session, TrainingMetric, TrainingResult, engine
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "training_data")
@@ -21,18 +22,22 @@ def wait_for_db(max_attempts: int = 30, sleep_seconds: int = 2) -> None:
     for attempt in range(1, max_attempts + 1):
         try:
             session = Session()
-            session.execute("SELECT 1")
+            session.execute(text("SELECT 1"))
             session.close()
-            print("Database is ready", flush=True)
+            print(f"Database is ready ({attempt}/{max_attempts})", flush=True)
             return
         except OperationalError:
             print(f"Database not ready yet ({attempt}/{max_attempts})", flush=True)
             time.sleep(sleep_seconds)
+
     raise RuntimeError("Database unavailable")
 
 
 def upsert_result(session, payload: dict) -> None:
-    existing = session.query(TrainingResult).filter(TrainingResult.run_key == payload["run_key"]).first()
+    existing = session.query(TrainingResult).filter(
+        TrainingResult.run_key == payload["run_key"]
+    ).first()
+
     if existing:
         existing.status = payload.get("status", existing.status)
         existing.final_accuracy = payload.get("final_accuracy", existing.final_accuracy)
@@ -53,6 +58,7 @@ def upsert_result(session, payload: dict) -> None:
 
 def main() -> None:
     wait_for_db()
+    Base.metadata.create_all(engine)
 
     consumer = Consumer(consumer_config)
     consumer.subscribe([KAFKA_TOPIC])
@@ -61,8 +67,10 @@ def main() -> None:
     try:
         while True:
             msg = consumer.poll(1.0)
+
             if msg is None:
                 continue
+
             if msg.error():
                 print(f"Consumer error: {msg.error()}", flush=True)
                 continue
@@ -73,6 +81,7 @@ def main() -> None:
             session = Session()
             try:
                 event_type = payload.get("event_type", "metric")
+
                 if event_type == "metric":
                     session.add(
                         TrainingMetric(
@@ -89,9 +98,11 @@ def main() -> None:
                     )
                 elif event_type == "result":
                     upsert_result(session, payload)
+
                 session.commit()
             finally:
                 session.close()
+
     except KeyboardInterrupt:
         print("Stopping consumer", flush=True)
     finally:
