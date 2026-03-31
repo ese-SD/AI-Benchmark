@@ -6,13 +6,28 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+from confluent_kafka import Producer
+
+producer = Producer({'bootstrap.servers':'kafka:9092'})
+
+def delivery_report(err, msg):
+    if err:
+        print(f"Delivery failed {err}", flush=True)
+    else:
+        value = msg.value().decode("utf-8")
+        print(f"Delivered {value}", flush=True)
+        print(f"To {msg.topic()}", flush=True)
 
 def send_metrics(metrics):
     """
     Simulation de l'envoi Kafka. 
     Pour l'instant, on affiche juste le JSON dans la console du conteneur.
     """
-    print(f"[MÉTRIQUES PyTorch] {json.dumps(metrics)}")
+    producer.produce(topic='training_data',
+                    value=json.dumps(metrics).encode("utf-8"),
+                    callback=delivery_report)
+
+    producer.flush()
 
 
 # Architecture simple pour Fashion MNIST, et ResNet18 pour CIFAR-100
@@ -77,8 +92,10 @@ def train_PyTorch_on_fashion_mnist():
             if i % 20 == 19:
                 speed = time.time() - start_time
                 send_metrics({
-                    "framework": "PyTorch", "dataset": "Fashion-MNIST",
-                    "epoch": epoch + 1, "accuracy": round(100 * correct / total, 2),
+                    "framework": "PyTorch",
+                    "dataset": "Fashion-MNIST",
+                    "epoch": epoch + 1,
+                    "accuracy": round(100 * correct / total, 2),
                     "execution_speed_seconds": round(speed, 2),
                     "cpu_usage_percent": psutil.cpu_percent(),
                     "ram_usage_percent": psutil.virtual_memory().percent,

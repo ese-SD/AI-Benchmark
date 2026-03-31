@@ -27,14 +27,15 @@ try:
         print(f"Consumer receive : {content}", flush=True)
 
         metric = Training_metrics(
-            library=content["library"],
+            framework=content["framework"],
             dataset=content["dataset"],
             epoch=content["epoch"],
 
             accuracy=content["accuracy"],
-            duree=content["duree"],
-            ram_usage=content["ram_usage"],
-            cpu_usage=content["cpu_usage"]
+            execution_speed_seconds=content["execution_speed_seconds"],
+            cpu_usage_percent=content["cpu_usage_percent"],
+            ram_usage_percent=content["ram_usage_percent"],
+            timestamp=content["timestamp"]
         )
         session.add(metric)
         session.commit()

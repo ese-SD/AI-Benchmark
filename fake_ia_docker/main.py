@@ -15,14 +15,14 @@ def delivery_report(err, msg):
         print(f"To {msg.topic()}", flush=True)
 
 training_metrics = {
-    "library": "test",
-    "dataset": "test",
+    "framework": "PyTorch",
+    "dataset": "Fashion-MNIST",
     "epoch": 1,
-
-    "accuracy": 1.2,
-    "duree": 10,
-    "ram_usage": 20,
-    "cpu_usage": 30
+    "accuracy": 75.5,
+    "execution_speed_seconds": 12.6,
+    "cpu_usage_percent": 85.2,
+    "ram_usage_percent": 56.7,
+    "timestamp": time.time()
 }
 
 while True:

@@ -6,7 +6,17 @@ import pickle
 import psutil
 import numpy as np
 from tensorflow import keras
+from confluent_kafka import Producer
 
+producer = Producer({'bootstrap.servers':'kafka:9092'})
+
+def delivery_report(err, msg):
+    if err:
+        print(f"Delivery failed {err}", flush=True)
+    else:
+        value = msg.value().decode("utf-8")
+        print(f"Delivered {value}", flush=True)
+        print(f"To {msg.topic()}", flush=True)
 
 
 class ConsoleMetricsCallback(keras.callbacks.Callback):
@@ -35,7 +45,12 @@ class ConsoleMetricsCallback(keras.callbacks.Callback):
                 "ram_usage_percent": psutil.virtual_memory().percent,
                 "timestamp": time.time()
             }
-            print(f"[MÉTRIQUES TensorFlow] {json.dumps(metrics)}")
+            
+            producer.produce(topic='training_data',
+                            value=json.dumps(metrics).encode("utf-8"),
+                            callback=delivery_report)
+
+            producer.flush()
             self.start_time = time.time()
 
 

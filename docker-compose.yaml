@@ -80,6 +80,7 @@ services:
           memory: 3G
     networks:
       - ml_network
+      - kafka-test
 
   tensorflow:
     build: ./src/modeles_ia/tensorflow
@@ -96,6 +97,7 @@ services:
           memory: 3G
     networks:
       - ml_network
+      - kafka-test
 
 networks:
   kafka-test:

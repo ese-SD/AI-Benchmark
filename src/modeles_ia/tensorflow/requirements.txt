@@ -1,3 +1,4 @@
 psutil
 tensorflow
 numpy
+confluent-kafka

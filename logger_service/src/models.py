@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -12,14 +12,15 @@ Base = declarative_base()
 class Training_metrics(Base):
     __tablename__ = "training_metrics"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    library = Column(String)
+    framework = Column(String)
     dataset = Column(String)
     epoch = Column(Integer)
     
     accuracy = Column(Float)
-    duree = Column(Integer)
-    ram_usage = Column(Integer)
-    cpu_usage = Column(Integer)
+    execution_speed_seconds = Column(Float)
+    cpu_usage_percent = Column(Float)
+    ram_usage_percent = Column(Float)
+    timestamp = Column(Float)
 
 class Result_metrics(Base):
     __tablename__ = "result_metrics"
@@ -29,4 +30,5 @@ class Result_metrics(Base):
     
     accuracy = Column(Float)
 
+Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)
