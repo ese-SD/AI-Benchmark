@@ -16,6 +16,10 @@ class ConsoleMetricsCallback(keras.callbacks.Callback):
         self.dataset_name = dataset_name
         self.start_time = time.time()
         self.batch_count = 0
+        self.current_epoch = 1
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.current_epoch = epoch + 1
 
     def on_train_batch_end(self, batch, logs=None):
         self.batch_count += 1
@@ -24,7 +28,7 @@ class ConsoleMetricsCallback(keras.callbacks.Callback):
             metrics = {
                 "framework": "TensorFlow",
                 "dataset": self.dataset_name,
-                "epoch": 1, 
+                "epoch": self.current_epoch,
                 "accuracy": round(logs.get('accuracy', 0) * 100, 2),
                 "execution_speed_seconds": round(speed, 2),
                 "cpu_usage_percent": psutil.cpu_percent(),
@@ -83,7 +87,7 @@ def train_tensorflow_on_fashion_mnist():
     model.fit(
         x_train, y_train, 
         batch_size=128, epochs=5, 
-        callbacks=[ConsoleMetricsCallback("Fashion-MNIST")], verbose=1
+        callbacks=[ConsoleMetricsCallback("Fashion-MNIST")], verbose=0
     )
 
 def train_tensorflow_on_cifar100():
@@ -104,7 +108,7 @@ def train_tensorflow_on_cifar100():
     model.fit(
         x_train, y_train, 
         batch_size=128, epochs=5, 
-        callbacks=[ConsoleMetricsCallback("CIFAR-100")], verbose=1
+        callbacks=[ConsoleMetricsCallback("CIFAR-100")], verbose=0
     )
 
 
