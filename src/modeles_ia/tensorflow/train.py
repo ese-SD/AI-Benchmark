@@ -35,7 +35,7 @@ class ConsoleMetricsCallback(keras.callbacks.Callback):
                 "ram_usage_percent": psutil.virtual_memory().percent,
                 "timestamp": time.time()
             }
-            print(f"[MÉTRIQUES TF] {json.dumps(metrics)}")
+            print(f"[MÉTRIQUES TensorFlow] {json.dumps(metrics)}")
             self.start_time = time.time()
 
 
