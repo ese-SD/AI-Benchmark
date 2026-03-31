@@ -13,21 +13,19 @@ services:
       - kafka_data:/tmp/kraft-storage
     environment:
       KAFKA_KRAFT_MODE: 'true'
-
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
       KAFKA_NODE_ID: 1
-
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
       KAFKA_LISTENERS: PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+
   perf_db:
     container_name: perf_db_container
-    image: postgres
+    image: postgres:16
     environment:
       POSTGRES_USER: micro_admin
       POSTGRES_PASSWORD: micro_pass
@@ -41,6 +39,38 @@ services:
       - kafka-test
     restart: unless-stopped
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    depends_on:
+      - perf_db
+    environment:
+      DB_HOST: perf_db
+      DB_PORT: 5432
+      DB_NAME: perf_db
+      DB_USER: micro_admin
+      DB_PASSWORD: micro_pass
+    ports:
+      - "8000:8000"
+    networks:
+      - kafka-test
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    networks:
+      - kafka-test
+    restart: unless-stopped
+
   logger_service:
     build:
       context: ./logger_service
@@ -49,52 +79,74 @@ services:
     depends_on:
       - perf_db
       - kafka
-    volumes:
-      - ./logger_service:/app
     networks:
       - kafka-test
     environment:
-      POSTGRES_USER: micro_admin
-      POSTGRES_PASSWORD: micro_pass
-      POSTGRES_DB: perf_db
+      DB_HOST: perf_db
+      DB_PORT: 5432
+      DB_NAME: perf_db
+      DB_USER: micro_admin
+      DB_PASSWORD: micro_pass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: training_data
 
   data_loader:
-    build: ./src/data_loader
+    build:
+      context: ./src/data_loader
+      dockerfile: dockerfile
     volumes:
-      - ./data/datasets:/data/datasets 
+      - ./data/datasets:/data/datasets
     networks:
       - ml_network
 
   pytorch:
-    build: ./src/modeles_ia/pytorch
+    build:
+      context: ./src/modeles_ia/pytorch
+      dockerfile: dockerfile
     volumes:
-      # Lecture seule (:ro)
       - ./data/datasets:/data/datasets:ro
     depends_on:
       data_loader:
         condition: service_completed_successfully
+      kafka:
+        condition: service_started
     deploy:
       resources:
         limits:
           cpus: '1.5'
           memory: 3G
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: training_data
+      EPOCHS: 2
+      MAX_BATCHES_PER_EPOCH: 30
+      METRIC_EVERY_N_BATCHES: 10
     networks:
       - ml_network
       - kafka-test
 
   tensorflow:
-    build: ./src/modeles_ia/tensorflow
+    build:
+      context: ./src/modeles_ia/tensorflow
+      dockerfile: dockerfile
     volumes:
-      # Lecture seule (:ro)
       - ./data/datasets:/data/datasets:ro
     depends_on:
       data_loader:
         condition: service_completed_successfully
+      kafka:
+        condition: service_started
     deploy:
       resources:
         limits:
           cpus: '1.5'
           memory: 3G
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: training_data
+      EPOCHS: 2
+      MAX_BATCHES_PER_EPOCH: 30
+      METRIC_EVERY_N_BATCHES: 10
     networks:
       - ml_network
       - kafka-test
@@ -102,7 +154,6 @@ services:
 networks:
   kafka-test:
     driver: bridge
-#    internal: true
   ml_network:
     driver: bridge
 
