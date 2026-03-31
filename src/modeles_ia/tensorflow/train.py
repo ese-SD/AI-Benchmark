@@ -55,15 +55,23 @@ def build_resnet_model():
         keras.layers.Dense(100, activation="softmax")
     ])
 
+def load_fashion_mnist_raw(path, kind='train'):
+    labels_path = os.path.join(path, f'{kind}-labels-idx1-ubyte.gz')
+    images_path = os.path.join(path, f'{kind}-images-idx3-ubyte.gz')
+    
+    with gzip.open(labels_path, 'rb') as lbpath:
+        labels = np.frombuffer(lbpath.read(), dtype=np.uint8, offset=8)
+    with gzip.open(images_path, 'rb') as imgpath:
+        images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 28, 28)
+        
+    return images, labels
 
 # Fonctions d'entraînement
 def train_tensorflow_on_fashion_mnist():
     print("\n--- Entraînement de TensorFlow sur Fashion MNIST ---")
     
-    # Lecture stricte hors-ligne
-    with np.load("/data/datasets/fashion-mnist.npz") as data:
-        x_train = data['x_train']
-        y_train = data['y_train']
+    raw_path = "/datasets/FashionMNIST/raw"
+    x_train, y_train = load_fashion_mnist_raw(raw_path, kind='train')
     
     x_train = x_train.astype("float32") / 255.0
     x_train = np.expand_dims(x_train, -1)
@@ -80,7 +88,6 @@ def train_tensorflow_on_fashion_mnist():
 def train_tensorflow_on_cifar100():
     print("\n--- Entraînement de TensorFlow sur CIFAR-100 ---")
     
-    # Lecture des fichiers extraits par le script PyTorch (équité parfaite)
     with open('/data/datasets/cifar-100-python/train', 'rb') as f:
         dict_cifar = pickle.load(f, encoding='bytes')
         x_train = dict_cifar[b'data']

@@ -43,13 +43,18 @@ def get_resnet_model():
 def train_PyTorch_on_fashion_mnist():
     print("\n--- Entrainement de PyTorch sur Fashion MNIST ---")
     
-    data = np.load('/data/datasets/fashion-mnist.npz')
-    x_train = data['x_train'].astype(np.float32) / 255.0
-    x_train = np.expand_dims(x_train, 1) # Format: (Batch, Channel, H, W)
-    y_train = data['y_train'].astype(np.int64)
-
-    dataset = torch.utils.data.TensorDataset(torch.Tensor(x_train), torch.Tensor(y_train).long())
-    trainloader = torch.utils.data.DataLoader(dataset, batch_size=128, shuffle=True)
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
+    ])
+    
+    trainset = torchvision.datasets.FashionMNIST(
+        root='/datasets', 
+        train=True, 
+        download=False, 
+        transform=transform
+    )
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True)
 
     model = SimpleCNN()
     criterion = nn.CrossEntropyLoss()
@@ -91,7 +96,13 @@ def train_PyTorch_on_cifar100():
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
     
-    trainset = torchvision.datasets.CIFAR100(root='/data/datasets/', train=True, download=False, transform=transform)
+    trainset = torchvision.datasets.CIFAR100(
+        root='/datasets', 
+        train=True, 
+        download=False, 
+        transform=transform
+    )    
+    
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True)
 
     model = get_resnet_model()
@@ -128,7 +139,6 @@ def train_PyTorch_on_cifar100():
 
 
 def main():
-    os.makedirs('/data/datasets', exist_ok=True)
     train_PyTorch_on_fashion_mnist()
     train_PyTorch_on_cifar100()
     print("\n PyTorch a terminé tous ses entraînements.")
