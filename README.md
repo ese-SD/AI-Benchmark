@@ -1,2 +1,17 @@
 # AI-Benchmark
-Architechture https://drive.google.com/file/d/1y7Y2wxRUU3O7gHeax4kfXDenHvo6PjHe/view?usp=sharing
+
+Lancement :
+```bash
+docker compose up -d --build
+```
+
+URLs :
+- Frontend : http://localhost:5173
+- Backend health : http://localhost:8000/health
+
+Comptes de test :
+- admin1 / admin123
+- admin2 / admin123
+- user1 / user123
+- user2 / user123
+- user3 / user123
