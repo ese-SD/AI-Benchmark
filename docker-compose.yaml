@@ -58,10 +58,51 @@ services:
       POSTGRES_PASSWORD: micro_pass
       POSTGRES_DB: perf_db
 
+  data_loader:
+    build: ./src/data_loader
+    volumes:
+      - ./data/datasets:/data/datasets 
+    networks:
+      - ml_network
+
+  pytorch:
+    build: ./src/modeles_ia/pytorch
+    volumes:
+      # Lecture seule (:ro)
+      - ./data/datasets:/data/datasets:ro
+    depends_on:
+      data_loader:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 3G
+    networks:
+      - ml_network
+
+  tensorflow:
+    build: ./src/modeles_ia/tensorflow
+    volumes:
+      # Lecture seule (:ro)
+      - ./data/datasets:/data/datasets:ro
+    depends_on:
+      data_loader:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 3G
+    networks:
+      - ml_network
+
 networks:
   kafka-test:
     driver: bridge
 #    internal: true
+  ml_network:
+    driver: bridge
 
 volumes:
   perf_db:
