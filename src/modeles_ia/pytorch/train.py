@@ -1,8 +1,6 @@
-import os
 import time
 import json
 import psutil
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -49,7 +47,7 @@ def train_PyTorch_on_fashion_mnist():
     ])
     
     trainset = torchvision.datasets.FashionMNIST(
-        root='/datasets', 
+        root='/data/datasets', 
         train=True, 
         download=False, 
         transform=transform
@@ -97,7 +95,7 @@ def train_PyTorch_on_cifar100():
     ])
     
     trainset = torchvision.datasets.CIFAR100(
-        root='/datasets', 
+        root='/data/datasets', 
         train=True, 
         download=False, 
         transform=transform

@@ -1,3 +1,4 @@
+import gzip
 import os
 import time
 import json
@@ -70,7 +71,7 @@ def load_fashion_mnist_raw(path, kind='train'):
 def train_tensorflow_on_fashion_mnist():
     print("\n--- Entraînement de TensorFlow sur Fashion MNIST ---")
     
-    raw_path = "/datasets/FashionMNIST/raw"
+    raw_path = "/data/datasets/FashionMNIST/raw"
     x_train, y_train = load_fashion_mnist_raw(raw_path, kind='train')
     
     x_train = x_train.astype("float32") / 255.0

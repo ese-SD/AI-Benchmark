@@ -4,7 +4,7 @@ services:
   data_loader:
     build: ./src/data_loader
     volumes:
-      - shared_datasets:/datasets 
+      - shared_datasets:/data/datasets 
     networks:
       - ml_network
 
@@ -12,7 +12,7 @@ services:
     build: ./src/modeles_ia/pytorch
     volumes:
       # Lecture seule (:ro)
-      - shared_datasets:/datasets:ro
+      - shared_datasets:/data/datasets:ro
     depends_on:
       data_loader:
         condition: service_completed_successfully
@@ -28,7 +28,7 @@ services:
     build: ./src/modeles_ia/tensorflow
     volumes:
       # Lecture seule (:ro)
-      - shared_datasets:/datasets:ro
+      - shared_datasets:/data/datasets:ro
     depends_on:
       data_loader:
         condition: service_completed_successfully
@@ -39,9 +39,6 @@ services:
           memory: 3G
     networks:
       - ml_network
-
-volumes:
-  shared_datasets:
 
 networks:
   ml_network:
