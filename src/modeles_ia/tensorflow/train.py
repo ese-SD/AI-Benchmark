@@ -1,57 +1,44 @@
 import os
 import time
 import json
+import pickle
 import psutil
-import tensorflow as tf
-from tensorflow import keras
 import numpy as np
+from tensorflow import keras
+
+
 
 class ConsoleMetricsCallback(keras.callbacks.Callback):
-    """
-    Remplace temporairement le callback Kafka par un simple print()
-    """
-    def __init__(self):
+    """Intercepte les métriques Keras en temps réel"""
+    def __init__(self, dataset_name):
         super().__init__()
-        self.dino_step_time = time.time()
+        self.dataset_name = dataset_name
+        self.start_time = time.time()
         self.batch_count = 0
 
     def on_train_batch_end(self, batch, logs=None):
         self.batch_count += 1
-        
-        # Affichage toutes les 20 itérations
         if self.batch_count % 20 == 0:
-            speed = time.time() - self.dino_step_time
-            
+            speed = time.time() - self.start_time
             metrics = {
                 "framework": "TensorFlow",
-                "dataset": "Fashion-MNIST",
-                # On récupère l'époque actuelle depuis self.params
-                "epoch": 1, # Géré approximativement pour cet exemple de callback par batch
+                "dataset": self.dataset_name,
+                "epoch": 1, 
                 "accuracy": round(logs.get('accuracy', 0) * 100, 2),
                 "execution_speed_seconds": round(speed, 2),
                 "cpu_usage_percent": psutil.cpu_percent(),
                 "ram_usage_percent": psutil.virtual_memory().percent,
                 "timestamp": time.time()
             }
-            
             print(f"[MÉTRIQUES TF] {json.dumps(metrics)}")
-            self.dino_step_time = time.time() # Reset du chrono
+            self.start_time = time.time()
 
-def main():
-    os.makedirs('/data/datasets', exist_ok=True)
-    print("Chargement de Fashion MNIST...")
-    
-    dataset_path = "/data/datasets/fashion-mnist.npz"
-    print(f"Chargement de Fashion MNIST depuis {dataset_path}...")
-    
-    with np.load(dataset_path) as data:
-        x_train = data['x_train']
-        y_train = data['y_train']
-    
-    x_train = x_train.astype("float32") / 255.0
-    x_train = np.expand_dims(x_train, -1)
 
-    model = keras.Sequential([
+# Architecture simple pour Fashion MNIST, et ResNet18 pour CIFAR-100
+
+def build_simple_cnn():
+    """Architecture simple équivalente pour Fashion MNIST"""
+    return keras.Sequential([
         keras.Input(shape=(28, 28, 1)),
         keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
         keras.layers.MaxPooling2D(pool_size=(2, 2)),
@@ -59,20 +46,65 @@ def main():
         keras.layers.Dense(10, activation="softmax"),
     ])
 
-    model.compile(loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+def build_resnet_model():
+    """Architecture ResNet50 pour CIFAR-100"""
+    base_model = keras.applications.ResNet50(include_top=False, weights=None, input_shape=(32, 32, 3))
+    return keras.Sequential([
+        base_model,
+        keras.layers.GlobalAveragePooling2D(),
+        keras.layers.Dense(100, activation="softmax")
+    ])
 
-    print("Début de l'entraînement TensorFlow...")
+
+# Fonctions d'entraînement
+def train_tensorflow_on_fashion_mnist():
+    print("\n--- Entraînement de TensorFlow sur Fashion MNIST ---")
     
-    # On utilise notre callback qui fait des prints
-    console_cb = ConsoleMetricsCallback()
+    # Lecture stricte hors-ligne
+    with np.load("/data/datasets/fashion-mnist.npz") as data:
+        x_train = data['x_train']
+        y_train = data['y_train']
+    
+    x_train = x_train.astype("float32") / 255.0
+    x_train = np.expand_dims(x_train, -1)
+
+    model = build_simple_cnn()
+    model.compile(loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
     
     model.fit(
         x_train, y_train, 
-        batch_size=128, 
-        epochs=10, 
-        callbacks=[console_cb],
-        verbose=1
+        batch_size=128, epochs=5, 
+        callbacks=[ConsoleMetricsCallback("Fashion-MNIST")], verbose=1
     )
+
+def train_tensorflow_on_cifar100():
+    print("\n--- Entraînement de TensorFlow sur CIFAR-100 ---")
+    
+    # Lecture des fichiers extraits par le script PyTorch (équité parfaite)
+    with open('/data/datasets/cifar-100-python/train', 'rb') as f:
+        dict_cifar = pickle.load(f, encoding='bytes')
+        x_train = dict_cifar[b'data']
+        y_train = np.array(dict_cifar[b'fine_labels'])
+
+    x_train = x_train.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+    x_train = x_train.astype("float32") / 255.0
+    x_train = (x_train - 0.5) / 0.5 # Normalisation
+
+    model = build_resnet_model()
+    model.compile(loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+    
+    model.fit(
+        x_train, y_train, 
+        batch_size=128, epochs=5, 
+        callbacks=[ConsoleMetricsCallback("CIFAR-100")], verbose=1
+    )
+
+
+def main():
+    os.makedirs('/data/datasets', exist_ok=True)
+    train_tensorflow_on_fashion_mnist()
+    train_tensorflow_on_cifar100()
+    print("\nTensorFlow a terminé tous ses entraînements.")
 
 if __name__ == "__main__":
     main()

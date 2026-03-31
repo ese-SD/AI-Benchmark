@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  data_loader:
+    image: python:3.10-slim
+    volumes:
+      - shared_datasets:/data/datasets 
+      - ./src/modeles_ia:/app 
+    command: python /app/telecharger_datasets.py
+
+  pytorch:
+    build: ./src/modeles_ia/pytorch
+    volumes:
+      # Montage en lecture seule (:ro) pour la sécurité
+      - shared_datasets:/data/datasets:ro
+    depends_on:
+      data_loader:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 3G
+    networks:
+      - ml_network
+
+  tensorflow:
+    build: ./src/modeles_ia/tensorflow
+    volumes:
+      - shared_datasets:/data/datasets:ro
+    depends_on:
+      data_loader:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 3G
+    networks:
+      - ml_network
+
+# Déclaration du volume géré par Docker
+volumes:
+  shared_datasets:
+
+# Déclaration du réseau isolé
+networks:
+  ml_network:
+    driver: bridge
