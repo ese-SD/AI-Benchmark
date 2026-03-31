@@ -94,8 +94,8 @@
           <div class="info-grid">
             <section class="card">
               <h2 class="section-title">Contacts</h2>
-              <p>admin@ai-benchmark.local</p>
-              <p>support@ai-benchmark.local</p>
+              <p>fauxContact@blabla.com</p>
+              <p>support@blabla.com</p>
             </section>
 
             <section class="card">
